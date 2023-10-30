@@ -8,7 +8,7 @@ from vendedor import *
 from produto import *
 
 #Conexão com o mongodb
-uri = ""
+uri = "mongodb+srv://viniciuslaranjeiro:vaitomarnocu@ecommerce.wmpyahq.mongodb.net/?retryWrites=true&w=majority"
 client = MongoClient(uri, server_api=ServerApi('1'))
 
 global db
@@ -18,7 +18,7 @@ db = client.Ecommerce
 conexaoRedis = redis.Redis(
   host='redis-16471.c308.sa-east-1-1.ec2.cloud.redislabs.com',
   port=16471,
-  password='')
+  password='pUM2nbXWu811wc3HluAujpfvA7ULAgG5')
 
 #keyLogin = 0
 usuarioEncontrado = None
@@ -47,12 +47,6 @@ while True:
                 if(usuarioEncontrado["senha"] == senha):
                     print(f"\nBem-vindo {usuarioEncontrado['nome']}")
                     conexaoRedis.setex(f"user-{usuarioEncontrado['contatos']['email']}", 300, usuarioEncontrado['nome'])
-
-                    favoritos = json.dumps(usuarioEncontrado['favoritos'])
-                    compras = json.dumps(usuarioEncontrado['compras'])  
-
-                    conexaoRedis.set(f"user-{usuarioEncontrado['contatos']['email']}-favoritos", favoritos)
-                    conexaoRedis.set(f"user-{usuarioEncontrado['contatos']['email']}-compras", compras)
                     break
                 else:
                     print('\nEmail ou senha incorretos.')
@@ -74,7 +68,7 @@ while True:
 
                 match opcaoCadastro:
                     case '1':
-                        create_usuario(db)
+                        create_usuario(db, conexaoRedis)
                         break
                     case '2':
                         create_vendedor(db)

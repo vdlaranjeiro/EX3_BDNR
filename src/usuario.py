@@ -1,7 +1,7 @@
 from datetime import datetime
 import json
 
-def create_usuario(db):
+def create_usuario(db, conexaoRedis):
     print('\nInsira as informações do usuário')
     cpf = input('CPF: ')
     nomeCompleto = input('Nome completo: ')
@@ -45,6 +45,9 @@ def create_usuario(db):
     
     mycol = db.Usuarios
     insert = mycol.insert_one(usuario)
+
+    conexaoRedis.rpush(f"user-{usuarioEncontrado['contatos']['email']}-favoritos", "")
+    conexaoRedis.rpush(f"user-{usuarioEncontrado['contatos']['email']}-compras", "")
     
     print(f'\nUsuário cadastrado no id: {insert.inserted_id}')
     return
