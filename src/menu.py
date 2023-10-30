@@ -8,7 +8,7 @@ from vendedor import *
 from produto import *
 
 #Conexão com o mongodb
-uri = "mongodb+srv://viniciuslaranjeiro:vaitomarnocu@ecommerce.wmpyahq.mongodb.net/?retryWrites=true&w=majority"
+uri = ""
 client = MongoClient(uri, server_api=ServerApi('1'))
 
 global db
@@ -18,12 +18,10 @@ db = client.Ecommerce
 conexaoRedis = redis.Redis(
   host='redis-16471.c308.sa-east-1-1.ec2.cloud.redislabs.com',
   port=16471,
-  password='pUM2nbXWu811wc3HluAujpfvA7ULAgG5')
+  password=''
 
-#keyLogin = 0
 usuarioEncontrado = None
 vendedorEncontrado = None
-
 
 while True:
     print('\nBem-vindo(a) ao Sistema que não tem nome ainda')
@@ -72,6 +70,8 @@ while True:
                         break
                     case '2':
                         create_vendedor(db)
+                        break
+                    case 'V':
                         break
         case 'S':
             break

@@ -46,8 +46,8 @@ def create_usuario(db, conexaoRedis):
     mycol = db.Usuarios
     insert = mycol.insert_one(usuario)
 
-    conexaoRedis.rpush(f"user-{usuarioEncontrado['contatos']['email']}-favoritos", "")
-    conexaoRedis.rpush(f"user-{usuarioEncontrado['contatos']['email']}-compras", "")
+    conexaoRedis.rpush(f"user-{contatos['email']}-favoritos", "")
+    conexaoRedis.rpush(f"user-{contatos['email']}-compras", "")
     
     print(f'\nUsuário cadastrado no id: {insert.inserted_id}')
     return
@@ -261,15 +261,11 @@ def compra_usuario(db, conexaoRedis, chaveUsuario, usuario):
                 "valor_compra": produtoEscolhido["valor"] * quantidadeEscolhida,
                 "data_compra": dataAtual.strftime('%d/%m/%Y %H:%M')
             }
+            
+            compra = json.dumps(compra)
+            conexaoRedis.rpush(f"{chaveUsuario}-compras", compra)
 
-            comprasUsuario = json.loads(conexaoRedis.get(f"{chaveUsuario}-compras"))
-            print(f"lista depois de deserializar: {comprasUsuario}")
-            comprasUsuario.append(compra)
-            comprasUsuario = json.dumps(comprasUsuario)
-            conexaoRedis.set(f"{chaveUsuario}-compras", comprasUsuario)
-
-
-            comprasUsuario = json.loads(conexaoRedis.get(f"{chaveUsuario}-compras"))
+            comprasUsuario = json.loads(conexaoRedis.lrange(f"{chaveUsuario}-compras", 0, -1))
             queryUsuario = {"cpf": usuario['cpf']}
             novasInformacoes = {"$set": {'compras': comprasUsuario}}
 
@@ -298,7 +294,7 @@ def checar_login_usuario(conexaoRedis, chaveUsuario):
 
 def update_favoritos_usuario(db, conexaoRedis, chaveUsuario, usuario):
     while True:
-        favoritos = json.loads(conexaoRedis.get(f"{chaveUsuario}-favoritos"))
+        favoritos = json.loads(conexaoRedis.lrange(f"{chaveUsuario}-favoritos", 0, -1))
 
         if not(favoritos):
             print('\nVocê ainda não possui nenhum item marcado como favorito.')
@@ -346,9 +342,8 @@ def update_favoritos_usuario(db, conexaoRedis, chaveUsuario, usuario):
                                     "valor": produtoEscolhido["valor"]
                                     }
 
-                                    favoritos.append(favorito)
-                                    atualizacaoFavoritos = json.dumps(favoritos)
-                                    conexaoRedis.set(f"{chaveUsuario}-favoritos", atualizacaoFavoritos)
+                                    favorito = json.dumps(favorito)
+                                    conexaoRedis.rpush(f"{chaveUsuario}-favoritos", favorito)
                                     print(f'{produtoEscolhido["nome"]} adicionado aos favoritos')
                                     break
                                 else:
@@ -366,9 +361,8 @@ def update_favoritos_usuario(db, conexaoRedis, chaveUsuario, usuario):
                             if(idFavoritoEscolhido.isnumeric()):
                                 favoritoEscolhido = next((favorito for favorito in favoritos if favorito["id_produto"] == int(idFavoritoEscolhido)), None)
                                 if(favoritoEscolhido):
-                                    favoritos.remove(favoritoEscolhido)
-                                    atualizacaoFavoritos = json.dumps(favoritos)
-                                    conexaoRedis.set(f"{chaveUsuario}-favoritos", atualizacaoFavoritos)
+                                    favoritoEscolhido = json.dumps(favoritoEscolhido)
+                                    conexaoRedis.lrem(f"{chaveUsuario}-favoritos", favoritoEscolhido, 1)
                                     print('Favorito removido')
                                     break
                                 else:
@@ -380,7 +374,7 @@ def update_favoritos_usuario(db, conexaoRedis, chaveUsuario, usuario):
         elif(keyUpdateFavoritos == 'N'):
             break
 
-    favoritosUsuario = json.loads(conexaoRedis.get(f"{chaveUsuario}-favoritos"))
+    favoritosUsuario = json.loads(conexaoRedis.lrange(f"{chaveUsuario}-favoritos", 0, -1))
     queryUsuario = {"cpf": usuario['cpf']}
     novasInformacoes = {"$set": {'favoritos': favoritosUsuario}}
 
