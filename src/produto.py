@@ -72,7 +72,7 @@ def read_produto(db, vendedor):
     produtos = list(produtos)
 
     if not (produtos):
-        print('Você ainda não possui produtos cadastrados.')
+        print('\nVocê ainda não possui produtos cadastrados.')
     else:
         print("\nSeus produtos:")
         for produto in produtos:

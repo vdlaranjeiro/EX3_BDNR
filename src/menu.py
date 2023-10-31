@@ -12,19 +12,19 @@ uri = ""
 client = MongoClient(uri, server_api=ServerApi('1'))
 
 global db
-db = client.Ecommerce
+db = client.EX3
 
 #Conexão com o redis
 conexaoRedis = redis.Redis(
   host='redis-16471.c308.sa-east-1-1.ec2.cloud.redislabs.com',
   port=16471,
-  password=''
+  password='')
 
 usuarioEncontrado = None
 vendedorEncontrado = None
 
 while True:
-    print('\nBem-vindo(a) ao Sistema que não tem nome ainda')
+    print('\nSeja bem-vindo(a)')
     print('1 - Fazer Login')
     print('2 - Criar uma conta')
     opcaoInicial = input('Selecione uma opção. (S para sair) ').upper()
@@ -43,14 +43,14 @@ while True:
 
             if(usuarioEncontrado):
                 if(usuarioEncontrado["senha"] == senha):
-                    print(f"\nBem-vindo {usuarioEncontrado['nome']}")
+                    print(f"\nBem-vindo, {usuarioEncontrado['nome']}")
                     conexaoRedis.setex(f"user-{usuarioEncontrado['contatos']['email']}", 300, usuarioEncontrado['nome'])
                     break
                 else:
                     print('\nEmail ou senha incorretos.')
             elif(vendedorEncontrado):
                 if(vendedorEncontrado["senha"] == senha):
-                    print(f"\nBem-vindo {vendedorEncontrado['nome']}")
+                    print(f"\nBem-vindo, {vendedorEncontrado['nome']}")
                     conexaoRedis.setex(f"user-{vendedorEncontrado['contatos']['email']}", 300, vendedorEncontrado['nome'])
                     break
                 else:

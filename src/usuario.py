@@ -1,5 +1,6 @@
 from datetime import datetime
 import json
+import uuid
 
 def create_usuario(db, conexaoRedis):
     print('\nInsira as informações do usuário')
@@ -45,9 +46,6 @@ def create_usuario(db, conexaoRedis):
     
     mycol = db.Usuarios
     insert = mycol.insert_one(usuario)
-
-    conexaoRedis.rpush(f"user-{contatos['email']}-favoritos", "")
-    conexaoRedis.rpush(f"user-{contatos['email']}-compras", "")
     
     print(f'\nUsuário cadastrado no id: {insert.inserted_id}')
     return
@@ -203,7 +201,7 @@ def compra_usuario(db, conexaoRedis, chaveUsuario, usuario):
 
     nomeProduto = input('Qual produto deseja comprar? ')
     colunaProdutos = db.Produtos
-    queryProduto = {"nome": nomeProduto}
+    queryProduto = {"nome": {"$regex": nomeProduto, "$options": "i"}}
     produtos = colunaProdutos.find(queryProduto)
     produtos = list(produtos)
 
@@ -254,6 +252,7 @@ def compra_usuario(db, conexaoRedis, chaveUsuario, usuario):
         if(confirmarCompra == 'S'):
             dataAtual = datetime.now()
             compra = {
+                "_id": str(uuid.uuid4()),
                 "id_produto": produtoEscolhido["_id"],
                 "nome_produto": produtoEscolhido["nome"],
                 "descricao_produto": produtoEscolhido["descricao"],
@@ -262,16 +261,29 @@ def compra_usuario(db, conexaoRedis, chaveUsuario, usuario):
                 "data_compra": dataAtual.strftime('%d/%m/%Y %H:%M')
             }
             
+            #Atualização da lista no redis
             compra = json.dumps(compra)
             conexaoRedis.rpush(f"{chaveUsuario}-compras", compra)
 
-            comprasUsuario = json.loads(conexaoRedis.lrange(f"{chaveUsuario}-compras", 0, -1))
+            #Atualização da coleção no mongodb com os dados do redis
+            comprasUsuarioRedis = conexaoRedis.lrange(f"{chaveUsuario}-compras", 0, -1)
+            comprasUsuario = []
+
+            if(comprasUsuarioRedis):
+                for compra in comprasUsuarioRedis:
+                    compra = json.loads(compra)
+                    comprasUsuario.append(compra)
+
             queryUsuario = {"cpf": usuario['cpf']}
             novasInformacoes = {"$set": {'compras': comprasUsuario}}
 
             colunaUsuarios = db.Usuarios
             colunaUsuarios.update_one(queryUsuario, novasInformacoes)
 
+            #Atualização da variável local do usuário logado
+            usuario["compras"] = comprasUsuario
+
+            #Atualização da coleção de produtos com a nova quantidade
             queryProduto = {"_id": produtoEscolhido["_id"]}
             novasInformacoes = {"$set": {
                 "quantidade": produtoEscolhido["quantidade"] - quantidadeEscolhida
@@ -294,7 +306,13 @@ def checar_login_usuario(conexaoRedis, chaveUsuario):
 
 def update_favoritos_usuario(db, conexaoRedis, chaveUsuario, usuario):
     while True:
-        favoritos = json.loads(conexaoRedis.lrange(f"{chaveUsuario}-favoritos", 0, -1))
+        favoritosRedis = conexaoRedis.lrange(f"{chaveUsuario}-favoritos", 0, -1)
+        favoritos = []
+
+        if(favoritosRedis):
+            for favorito in favoritosRedis:
+                favorito = json.loads(favorito)
+                favoritos.append(favorito)
 
         if not(favoritos):
             print('\nVocê ainda não possui nenhum item marcado como favorito.')
@@ -316,7 +334,7 @@ def update_favoritos_usuario(db, conexaoRedis, chaveUsuario, usuario):
                 match keyOpcaoFavoritos:
                     case '1':
                         nomeProduto = input('Qual produto você deseja adicionar? ')
-                        queryProduto = {"nome": nomeProduto}
+                        queryProduto = {"nome": {"$regex": nomeProduto, "$options": "i"}}
                         colunaProdutos = db.Produtos
                         produtos = colunaProdutos.find(queryProduto)
 
@@ -336,12 +354,14 @@ def update_favoritos_usuario(db, conexaoRedis, chaveUsuario, usuario):
                                 produtoEscolhido = next((produto for produto in produtos if produto["_id"] == int(idProdutoEscolhido)), None)
                                 if(produtoEscolhido):
                                     favorito = {
+                                    "_id": str(uuid.uuid4()),
                                     "id_produto": produtoEscolhido["_id"],
                                     "nome": produtoEscolhido["nome"],
                                     "descricao": produtoEscolhido["descricao"],
                                     "valor": produtoEscolhido["valor"]
                                     }
 
+                                    #Atualização da lista no redis
                                     favorito = json.dumps(favorito)
                                     conexaoRedis.rpush(f"{chaveUsuario}-favoritos", favorito)
                                     print(f'{produtoEscolhido["nome"]} adicionado aos favoritos')
@@ -353,16 +373,19 @@ def update_favoritos_usuario(db, conexaoRedis, chaveUsuario, usuario):
                                 print('Código inválido')
                                 break
                     case '2':
-                        if not(usuario["favoritos"]):
-                            print('Não há itens nos favoritos para remover')
+                        if not(favoritos):
+                            print('\nNão há itens nos favoritos para remover')
                             break
                         else:
                             idFavoritoEscolhido = input('Digite o código do favorito que deseja remover: ')
-                            if(idFavoritoEscolhido.isnumeric()):
-                                favoritoEscolhido = next((favorito for favorito in favoritos if favorito["id_produto"] == int(idFavoritoEscolhido)), None)
-                                if(favoritoEscolhido):
-                                    favoritoEscolhido = json.dumps(favoritoEscolhido)
-                                    conexaoRedis.lrem(f"{chaveUsuario}-favoritos", favoritoEscolhido, 1)
+                            if idFavoritoEscolhido.isnumeric():
+                                idFavoritoEscolhido = int(idFavoritoEscolhido)
+                                favoritoEscolhido = next((favorito for favorito in favoritos if favorito["id_produto"] == idFavoritoEscolhido), None)
+                                if favoritoEscolhido:
+
+                                    #Atualização da lista no redis
+                                    favoritoEscolhido = json.dumps(favoritoEscolhido) 
+                                    conexaoRedis.lrem(f"{chaveUsuario}-favoritos", 1, favoritoEscolhido)  
                                     print('Favorito removido')
                                     break
                                 else:
@@ -374,10 +397,20 @@ def update_favoritos_usuario(db, conexaoRedis, chaveUsuario, usuario):
         elif(keyUpdateFavoritos == 'N'):
             break
 
-    favoritosUsuario = json.loads(conexaoRedis.lrange(f"{chaveUsuario}-favoritos", 0, -1))
+    #Atualização da coleção no mongodb com os dados do redis
+    favoritosRedis = conexaoRedis.lrange(f"{chaveUsuario}-favoritos", 0, -1)
+    favoritos = []
+
+    if(favoritosRedis):
+        for favorito in conexaoRedis.lrange(f"{chaveUsuario}-favoritos", 0, -1):
+            favorito = json.loads(favorito)
+            favoritos.append(favorito)
     queryUsuario = {"cpf": usuario['cpf']}
-    novasInformacoes = {"$set": {'favoritos': favoritosUsuario}}
+    novasInformacoes = {"$set": {'favoritos': favoritos}}
 
     colunaUsuarios = db.Usuarios
-    colunaUsuarios.update_one(queryUsuario, novasInformacoes)                            
+    colunaUsuarios.update_one(queryUsuario, novasInformacoes)
+
+    #Atualização da variável local do usuário logado
+    usuario["favoritos"] = favoritos                         
     return
