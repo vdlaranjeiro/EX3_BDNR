@@ -55,9 +55,9 @@ def delete_usuario(db, conexaoRedis, chaveUsuario, usuario):
 
     if(confirmacaoExclusao == 'S'):
         myquery = {"cpf": usuario['cpf']}
-        colunaUsuarios = db.Usuarios
+        colecaoUsuarios = db.Usuarios
 
-        colunaUsuarios.delete_one(myquery)
+        colecaoUsuarios.delete_one(myquery)
         conexaoRedis.delete(chaveUsuario)
         conexaoRedis.delete(f"{chaveUsuario}-favoritos")
         conexaoRedis.delete(f"{chaveUsuario}-compras")
@@ -93,11 +93,17 @@ def read_usuario(usuario):
 
     print("\nFavoritos:")
     for favorito in usuario['favoritos']:
-        print(favorito)
+        print(f'\nNome: {favorito["nome"]}')
+        print(f'Descrição: {favorito["descricao"]}')
+        print(f'Valor: {favorito["valor"]}')
 
     print("\nCompras:")
     for compra in usuario['compras']:
-        print(compra)
+        print(f'\nNome: {compra["nome_produto"]}')
+        print(f'Descrição: {compra["descricao_produto"]}')
+        print(f'Quantidade: {compra["quantidade"]}')
+        print(f'Valor: {compra["valor_compra"]}')
+        print(f'Data: {compra["data_compra"]}')
     
     return
 
@@ -190,9 +196,9 @@ def update_usuario(db, mydoc):
         mydoc["contatos"]["email"] = email
     
     novasInformacoes = {"$set": mydoc}
-    colunaUsuarios = db.Usuarios
+    colecaoUsuarios = db.Usuarios
     usuario = {"cpf": mydoc['cpf']}
-    colunaUsuarios.update_one(usuario, novasInformacoes)
+    colecaoUsuarios.update_one(usuario, novasInformacoes)
     print('\nInformações atualizadas com sucesso!')
 
     return
@@ -200,9 +206,9 @@ def update_usuario(db, mydoc):
 def compra_usuario(db, conexaoRedis, chaveUsuario, usuario):
 
     nomeProduto = input('Qual produto deseja comprar? ')
-    colunaProdutos = db.Produtos
+    colecaoProdutos = db.Produtos
     queryProduto = {"nome": {"$regex": nomeProduto, "$options": "i"}}
-    produtos = colunaProdutos.find(queryProduto)
+    produtos = colecaoProdutos.find(queryProduto)
     produtos = list(produtos)
 
     if not(produtos):
@@ -277,8 +283,8 @@ def compra_usuario(db, conexaoRedis, chaveUsuario, usuario):
             queryUsuario = {"cpf": usuario['cpf']}
             novasInformacoes = {"$set": {'compras': comprasUsuario}}
 
-            colunaUsuarios = db.Usuarios
-            colunaUsuarios.update_one(queryUsuario, novasInformacoes)
+            colecaoUsuarios = db.Usuarios
+            colecaoUsuarios.update_one(queryUsuario, novasInformacoes)
 
             #Atualização da variável local do usuário logado
             usuario["compras"] = comprasUsuario
@@ -288,7 +294,7 @@ def compra_usuario(db, conexaoRedis, chaveUsuario, usuario):
             novasInformacoes = {"$set": {
                 "quantidade": produtoEscolhido["quantidade"] - quantidadeEscolhida
             }}
-            colunaProdutos.update_one(queryProduto, novasInformacoes)
+            colecaoProdutos.update_one(queryProduto, novasInformacoes)
 
             print('Compra realizada com sucesso! ')
 
@@ -333,10 +339,10 @@ def update_favoritos_usuario(db, conexaoRedis, chaveUsuario, usuario):
                 keyOpcaoFavoritos = input('Escolha uma opção: (C para cancelar) ').upper()
                 match keyOpcaoFavoritos:
                     case '1':
-                        nomeProduto = input('Qual produto você deseja adicionar? ')
+                        nomeProduto = input('Qual produto você deseja adicionar? (digite o nome) ')
                         queryProduto = {"nome": {"$regex": nomeProduto, "$options": "i"}}
-                        colunaProdutos = db.Produtos
-                        produtos = colunaProdutos.find(queryProduto)
+                        colecaoProdutos = db.Produtos
+                        produtos = colecaoProdutos.find(queryProduto)
 
                         produtos = list(produtos)
                         if not(produtos):
@@ -402,14 +408,14 @@ def update_favoritos_usuario(db, conexaoRedis, chaveUsuario, usuario):
     favoritos = []
 
     if(favoritosRedis):
-        for favorito in conexaoRedis.lrange(f"{chaveUsuario}-favoritos", 0, -1):
+        for favorito in favoritosRedis:
             favorito = json.loads(favorito)
             favoritos.append(favorito)
     queryUsuario = {"cpf": usuario['cpf']}
     novasInformacoes = {"$set": {'favoritos': favoritos}}
 
-    colunaUsuarios = db.Usuarios
-    colunaUsuarios.update_one(queryUsuario, novasInformacoes)
+    colecaoUsuarios = db.Usuarios
+    colecaoUsuarios.update_one(queryUsuario, novasInformacoes)
 
     #Atualização da variável local do usuário logado
     usuario["favoritos"] = favoritos                         

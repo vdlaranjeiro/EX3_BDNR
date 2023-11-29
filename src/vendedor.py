@@ -20,6 +20,7 @@ def create_vendedor(db):
     keyEnderecos = 0
     while(keyEnderecos != 'N'):
         print('\nDigite seu endereço: ')
+        cep = input('CEP: ')
         rua = input('Rua: ')
         numero = input('Número: ')
         bairro = input('Bairro: ')
@@ -27,6 +28,7 @@ def create_vendedor(db):
         estado = input('Estado: ')
 
         endereco = {
+            "cep": cep,
             "rua": rua,
             "numero": numero,
             "bairro": bairro,
@@ -64,7 +66,7 @@ def create_vendedor(db):
 
 def delete_vendedor(db, vendedor):
 
-    excluirVendedor = input('Deseja realmente excluir sua conta? S/N ')
+    excluirVendedor = input('Deseja realmente excluir sua conta? S/N ').upper()
     if(excluirVendedor == 'S'):
         myquery = {
             "$or": [
@@ -87,15 +89,14 @@ def delete_vendedor(db, vendedor):
 def read_vendedor(db, vendedor):
 
     print("\nInformações do vendedor:")
-    if len(vendedor["cpf"]):
-        print(f'CPF: {vendedor["cpf"]}')
-    if len(vendedor["cnpj"]):
-        print(f'CPF: {vendedor["cnpj"]}')
+    if len(vendedor["cpf"]): print(f'CPF: {vendedor["cpf"]}')
+    if len(vendedor["cnpj"]): print(f'CPF: {vendedor["cnpj"]}')
     print(f"Nome: {vendedor['nome']}")
 
     print("Endereços:")
     for endereco in vendedor['enderecos']:
-        print(f"\nRua: {endereco['rua']}")
+        print(f"\nCEP: {endereco['cep']}")
+        print(f"Rua: {endereco['rua']}")
         print(f"Número: {endereco['numero']}")
         print(f"Bairro: {endereco['bairro']}")
         print(f"Cidade: {endereco['cidade']}")
@@ -107,19 +108,6 @@ def read_vendedor(db, vendedor):
     for telefone in vendedor['contatos']['telefones']:
         print(telefone)
 
-    queryProdutos = {"_idVendedor": vendedor["_id"]}
-    mycol = db.Produtos
-    mydoc = mycol.find(queryProdutos)
-    produtos = list(mydoc)
-
-    if produtos:
-        print('\nProdutos deste vendedor: ')
-        for produto in produtos:
-            print(f'Código: {produto["_id"]}')
-            print(f'Nome: {produto["nome"]}')
-            print(f'Valor: {produto["valor"]}\n')
-    else:
-        print('\nNão há produtos cadastrados nesse vendedor')
     return
 
 def update_vendedor(db, vendedor):
@@ -140,6 +128,7 @@ def update_vendedor(db, vendedor):
             match keyOpcaoEnderecos:
                 case '1':
                     endereco = {
+                        "cep": input("CEP:"),
                         "rua": input('Rua: '),
                         "numero": input('Numero: '),
                         "bairro": input('Bairro: '),
@@ -153,6 +142,7 @@ def update_vendedor(db, vendedor):
                     contadorEndereco = 1
                     for endereco in vendedor["enderecos"]:
                         print(f'\nEndereço {contadorEndereco}')
+                        print(f"CEP: {endereco['cep']}")
                         print(f"Rua: {endereco['rua']}")
                         print(f"Número: {endereco['numero']}")
                         print(f"Bairro: {endereco['bairro']}")
@@ -210,14 +200,14 @@ def update_vendedor(db, vendedor):
     
     novasInformacoes = {"$set": vendedor}
 
-    colunaVendedores = db.Vendedores
+    colecaoVendedores = db.Vendedores
     myquery = {
         "$or": [
             {"cpf": vendedor['cpf']},
             {"cnpj": vendedor['cnpj']}
         ]
     }
-    colunaVendedores.update_one(myquery, novasInformacoes)
+    colecaoVendedores.update_one(myquery, novasInformacoes)
     print('\nInformações atualizadas com sucesso!')
     
     return

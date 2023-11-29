@@ -8,11 +8,11 @@ from vendedor import *
 from produto import *
 
 #Conexão com o mongodb
-uri = ""
+uri = "mongodb+srv://<username>:<password>@ecommerce.wmpyahq.mongodb.net/?retryWrites=true&w=majority"
 client = MongoClient(uri, server_api=ServerApi('1'))
 
 global db
-db = client.EX3
+db = client.EX2
 
 #Conexão com o redis
 conexaoRedis = redis.Redis(
@@ -43,14 +43,14 @@ while True:
 
             if(usuarioEncontrado):
                 if(usuarioEncontrado["senha"] == senha):
-                    print(f"\nBem-vindo, {usuarioEncontrado['nome']}")
+                    print(f"\nBem-vindo(a), {usuarioEncontrado['nome']}")
                     conexaoRedis.setex(f"user-{usuarioEncontrado['contatos']['email']}", 300, usuarioEncontrado['nome'])
                     break
                 else:
                     print('\nEmail ou senha incorretos.')
             elif(vendedorEncontrado):
                 if(vendedorEncontrado["senha"] == senha):
-                    print(f"\nBem-vindo, {vendedorEncontrado['nome']}")
+                    print(f"\nBem-vindo(a), {vendedorEncontrado['nome']}")
                     conexaoRedis.setex(f"user-{vendedorEncontrado['contatos']['email']}", 300, vendedorEncontrado['nome'])
                     break
                 else:
